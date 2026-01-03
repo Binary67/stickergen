@@ -67,7 +67,7 @@ export function ImageUpload({
           <img
             src={preview}
             alt="Reference preview"
-            className="w-full h-40 object-cover"
+            className="w-full h-40 object-contain bg-[var(--bg-secondary)]"
           />
           <button
             onClick={onClear}

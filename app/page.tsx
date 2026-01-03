@@ -31,7 +31,10 @@ export default function Home() {
       const response = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim() }),
+        body: JSON.stringify({
+          prompt: prompt.trim(),
+          referenceImage: referencePreview || undefined,
+        }),
       });
 
       const data: GenerateResponse = await response.json();

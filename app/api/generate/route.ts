@@ -8,6 +8,16 @@ IMPORTANT REQUIREMENTS:
 - No text unless specifically requested
 - Cartoon/illustration style`;
 
+const SYSTEM_PROMPT_WITH_REFERENCE = `You are a sticker designer. Generate a single sticker image based on the reference image and user's description.
+IMPORTANT REQUIREMENTS:
+- PRESERVE the character, subject, or main element from the reference image
+- Maintain the character's appearance, colors, and distinctive features
+- The sticker MUST have a transparent background
+- Use bold outlines and vibrant colors suitable for stickers
+- The design should be centered and self-contained
+- No text unless specifically requested
+- Apply the user's prompt as modifications or context to the reference subject`;
+
 interface OpenRouterImageResponse {
   choices: Array<{
     message: {
@@ -39,11 +49,19 @@ const SAFETY_SETTINGS = [
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt } = await request.json();
+    const { prompt, referenceImage } = await request.json();
 
     if (!prompt || typeof prompt !== "string") {
       return NextResponse.json(
         { success: false, error: "Prompt is required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate reference image format if provided
+    if (referenceImage && !referenceImage.startsWith("data:image/")) {
+      return NextResponse.json(
+        { success: false, error: "Invalid reference image format" },
         { status: 400 }
       );
     }
@@ -56,7 +74,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const fullPrompt = `${SYSTEM_PROMPT}\n\nUser request: ${prompt}\n\nGenerate a sticker with transparent background.`;
+    // Use reference-aware prompt when image is provided
+    const systemPrompt = referenceImage
+      ? SYSTEM_PROMPT_WITH_REFERENCE
+      : SYSTEM_PROMPT;
+    const fullPromptText = `${systemPrompt}\n\nUser request: ${prompt}\n\nGenerate a sticker with transparent background.`;
+
+    // Build message content - array for multimodal, string for text-only
+    type MessageContent =
+      | string
+      | Array<
+          | { type: "text"; text: string }
+          | { type: "image_url"; image_url: { url: string } }
+        >;
+
+    const messageContent: MessageContent = referenceImage
+      ? [
+          { type: "text", text: fullPromptText },
+          { type: "image_url", image_url: { url: referenceImage } },
+        ]
+      : fullPromptText;
 
     const response = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
@@ -68,7 +105,7 @@ export async function POST(request: NextRequest) {
         },
         body: JSON.stringify({
           model: "google/gemini-3-pro-image-preview",
-          messages: [{ role: "user", content: fullPrompt }],
+          messages: [{ role: "user", content: messageContent }],
           modalities: ["image", "text"],
           image_config: {
             aspect_ratio: "1:1",
