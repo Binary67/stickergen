@@ -9,14 +9,22 @@ IMPORTANT REQUIREMENTS:
 - Cartoon/illustration style`;
 
 const SYSTEM_PROMPT_WITH_REFERENCE = `You are a sticker designer. Generate a single sticker image based on the reference image and user's description.
-IMPORTANT REQUIREMENTS:
-- PRESERVE the character, subject, or main element from the reference image
-- Maintain the character's appearance, colors, and distinctive features
+
+CHARACTER IDENTITY (PRESERVE THESE):
+- Face, body shape, and proportions
+- Colors, clothing, and distinctive visual features
+- Overall art style and character design
+
+ACTION/POSE (DO NOT COPY FROM REFERENCE):
+- Ignore the pose, gesture, or action shown in the reference image
+- Use the pose/action described in the user's prompt instead
+- The character should perform what the user describes, not what they're doing in the reference
+
+STICKER REQUIREMENTS:
 - The sticker MUST have a transparent background
 - Use bold outlines and vibrant colors suitable for stickers
 - The design should be centered and self-contained
-- No text unless specifically requested
-- Apply the user's prompt as modifications or context to the reference subject`;
+- No text unless specifically requested`;
 
 interface OpenRouterImageResponse {
   choices: Array<{
