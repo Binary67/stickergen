@@ -1,30 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { promises as fs } from "fs";
+import path from "path";
 
-const SYSTEM_PROMPT = `You are a sticker designer. Generate a single sticker image based on the user's description.
-IMPORTANT REQUIREMENTS:
-- The sticker MUST have a transparent background
-- Use bold outlines and vibrant colors suitable for stickers
-- The design should be centered and self-contained
-- No text unless specifically requested
-- Cartoon/illustration style`;
-
-const SYSTEM_PROMPT_WITH_REFERENCE = `You are a sticker designer. Generate a single sticker image based on the reference image and user's description.
-
-CHARACTER IDENTITY (PRESERVE THESE):
-- Face, body shape, and proportions
-- Colors, clothing, and distinctive visual features
-- Overall art style and character design
-
-ACTION/POSE (DO NOT COPY FROM REFERENCE):
-- Ignore the pose, gesture, or action shown in the reference image
-- Use the pose/action described in the user's prompt instead
-- The character should perform what the user describes, not what they're doing in the reference
-
-STICKER REQUIREMENTS:
-- The sticker MUST have a transparent background
-- Use bold outlines and vibrant colors suitable for stickers
-- The design should be centered and self-contained
-- No text unless specifically requested`;
+interface CharacterConfig {
+  name: string;
+  description: string;
+  images: string[];
+  identityPrompt: string;
+}
 
 interface OpenRouterImageResponse {
   choices: Array<{
@@ -55,21 +38,81 @@ const SAFETY_SETTINGS = [
   { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" },
 ];
 
+// Cache for character config and images
+let cachedConfig: CharacterConfig | null = null;
+let cachedImages: string[] | null = null;
+
+async function loadCharacterConfig(): Promise<CharacterConfig> {
+  if (cachedConfig) return cachedConfig;
+
+  const configPath = path.join(process.cwd(), "public", "characters", "characters.json");
+  const configContent = await fs.readFile(configPath, "utf-8");
+  cachedConfig = JSON.parse(configContent) as CharacterConfig;
+  return cachedConfig;
+}
+
+async function loadCharacterImages(config: CharacterConfig): Promise<string[]> {
+  if (cachedImages) return cachedImages;
+
+  const images: string[] = [];
+
+  for (const imagePath of config.images) {
+    try {
+      const fullPath = path.join(process.cwd(), "public", imagePath);
+      const imageBuffer = await fs.readFile(fullPath);
+      const base64 = imageBuffer.toString("base64");
+
+      // Determine MIME type from extension
+      const ext = path.extname(imagePath).toLowerCase();
+      const mimeType =
+        ext === ".png" ? "image/png" :
+        ext === ".jpg" || ext === ".jpeg" ? "image/jpeg" :
+        ext === ".webp" ? "image/webp" :
+        "image/png";
+
+      images.push(`data:${mimeType};base64,${base64}`);
+    } catch (error) {
+      console.warn(`Failed to load image: ${imagePath}`, error);
+    }
+  }
+
+  cachedImages = images;
+  return images;
+}
+
+function buildSystemPrompt(config: CharacterConfig): string {
+  return `You are a sticker designer. Generate a single sticker image based on the reference images and user's description.
+
+${config.identityPrompt}
+
+CHARACTER DESCRIPTION:
+${config.description}
+
+CHARACTER IDENTITY (PRESERVE THESE):
+- Face, body shape, and proportions exactly as shown in reference images
+- Colors, clothing, and distinctive visual features
+- Overall art style and character design
+
+ACTION/POSE (DO NOT COPY FROM REFERENCE):
+- Ignore the pose, gesture, or action shown in the reference images
+- Use the pose/action described in the user's prompt instead
+- The characters should perform what the user describes, not what they're doing in the references
+
+STICKER REQUIREMENTS:
+- Generate ONE unified scene, NOT split panels or multiple frames
+- Include an appropriate background that complements the scene or action
+- Use bold outlines and vibrant colors suitable for stickers
+- The design should be centered and fill the frame well
+- No text unless specifically requested`;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { prompt, referenceImage } = await request.json();
+    const { prompt } = await request.json();
 
     if (!prompt || typeof prompt !== "string") {
       return NextResponse.json(
         { success: false, error: "Prompt is required" },
-        { status: 400 }
-      );
-    }
-
-    // Validate reference image format if provided
-    if (referenceImage && !referenceImage.startsWith("data:image/")) {
-      return NextResponse.json(
-        { success: false, error: "Invalid reference image format" },
         { status: 400 }
       );
     }
@@ -82,26 +125,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use reference-aware prompt when image is provided
-    const systemPrompt = referenceImage
-      ? SYSTEM_PROMPT_WITH_REFERENCE
-      : SYSTEM_PROMPT;
-    const fullPromptText = `${systemPrompt}\n\nUser request: ${prompt}\n\nGenerate a sticker with transparent background.`;
+    // Load character configuration and images
+    const config = await loadCharacterConfig();
+    const referenceImages = await loadCharacterImages(config);
 
-    // Build message content - array for multimodal, string for text-only
-    type MessageContent =
-      | string
-      | Array<
-          | { type: "text"; text: string }
-          | { type: "image_url"; image_url: { url: string } }
-        >;
+    if (referenceImages.length === 0) {
+      return NextResponse.json(
+        { success: false, error: "No character reference images found" },
+        { status: 500 }
+      );
+    }
 
-    const messageContent: MessageContent = referenceImage
-      ? [
-          { type: "text", text: fullPromptText },
-          { type: "image_url", image_url: { url: referenceImage } },
-        ]
-      : fullPromptText;
+    const systemPrompt = buildSystemPrompt(config);
+    const fullPromptText = `${systemPrompt}\n\nUser request: ${prompt}`;
+
+    // Build multimodal message content with all reference images
+    type MessageContent = Array<
+      | { type: "text"; text: string }
+      | { type: "image_url"; image_url: { url: string } }
+    >;
+
+    const messageContent: MessageContent = [
+      { type: "text", text: fullPromptText },
+      ...referenceImages.map((imageUrl) => ({
+        type: "image_url" as const,
+        image_url: { url: imageUrl },
+      })),
+    ];
 
     const response = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
@@ -143,7 +193,6 @@ export async function POST(request: NextRequest) {
 
     const images = data.choices?.[0]?.message?.images;
     if (!images || images.length === 0) {
-      // Check for content blocking reasons
       const finishReason = data.choices?.[0]?.finish_reason;
       const blockReason = data.promptFeedback?.blockReason;
 

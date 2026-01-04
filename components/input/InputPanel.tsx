@@ -2,25 +2,12 @@
 
 import { Button } from "@/components/ui/Button";
 import { PromptInput } from "./PromptInput";
-import { ImageUpload } from "./ImageUpload";
+import { CharacterDisplay } from "./CharacterDisplay";
 import { Sparkles } from "lucide-react";
-
-interface ImageDimensions {
-  width: number;
-  height: number;
-}
 
 interface InputPanelProps {
   prompt: string;
   onPromptChange: (value: string) => void;
-  referencePreview: string | null;
-  referenceFileName: string | null;
-  referenceDimensions: ImageDimensions | null;
-  referenceError: string | null;
-  onFileSelect: (file: File | null) => void;
-  onDrop: (e: React.DragEvent) => void;
-  onDragOver: (e: React.DragEvent) => void;
-  onClearReference: () => void;
   onGenerate: () => void;
   isGenerating: boolean;
 }
@@ -28,14 +15,6 @@ interface InputPanelProps {
 export function InputPanel({
   prompt,
   onPromptChange,
-  referencePreview,
-  referenceFileName,
-  referenceDimensions,
-  referenceError,
-  onFileSelect,
-  onDrop,
-  onDragOver,
-  onClearReference,
   onGenerate,
   isGenerating,
 }: InputPanelProps) {
@@ -49,16 +28,7 @@ export function InputPanel({
           onChange={onPromptChange}
         />
 
-        <ImageUpload
-          preview={referencePreview}
-          fileName={referenceFileName}
-          dimensions={referenceDimensions}
-          error={referenceError}
-          onFileSelect={onFileSelect}
-          onDrop={onDrop}
-          onDragOver={onDragOver}
-          onClear={onClearReference}
-        />
+        <CharacterDisplay />
       </div>
 
       <div className="pt-8 mt-auto flex justify-center">

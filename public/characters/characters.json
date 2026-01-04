@@ -1,0 +1,13 @@
+{
+  "name": "Dudu & Bubu",
+  "icon": "characters/DuduBubu-1.png",
+  "description": "Dudu and Bubu - Dudu and Bubu are an adorable pair of cartoon bears drawn in a minimalist kawaii style. Dudu is a small, chubby brown bear with caramel-tan fur, tiny round ears matching his body color, simple dot eyes, and a distinctive yellow circular patch on one cheek with pink blush on the other. Bubu is a slightly larger, rounder white panda-like bear with pure white fur, contrasting dark brown/black round ears, dot eyes, and soft pink blush marks on both cheeks. Both characters have compact, rounded bodies with stubby limbs, no noses, and gentle expressions. They're always depicted together as an affectionate couple—holding hands, hugging, or enjoying activities side by side.",
+  "images": [
+    "characters/DuduBubu-1.png",
+    "characters/DuduBubu-2.png",
+    "characters/DuduBubu-3.png",
+    "characters/DuduBubu-4.png",
+    "characters/DuduBubu-5.png"
+  ],
+  "identityPrompt": "These are Dudu and Bubu. Preserve their EXACT appearance: faces, body shapes, colors, and distinctive features. The characters' identities must remain consistent with the reference images."
+}

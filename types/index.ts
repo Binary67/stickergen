@@ -12,7 +12,6 @@ export interface GenerationState {
 
 export interface GenerateRequest {
   prompt: string;
-  referenceImage?: string; // base64 data URL, optional
 }
 
 export interface GenerateResponse {

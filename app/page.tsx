@@ -5,24 +5,12 @@ import { Header } from "@/components/layout/Header";
 import { SplitView } from "@/components/layout/SplitView";
 import { InputPanel } from "@/components/input/InputPanel";
 import { OutputPanel } from "@/components/output/OutputPanel";
-import { useImageUpload } from "@/hooks/useImageUpload";
 import type { Sticker, GenerateResponse } from "@/types";
 
 export default function Home() {
   const [prompt, setPrompt] = useState("");
   const [sticker, setSticker] = useState<Sticker | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-
-  const {
-    preview: referencePreview,
-    fileName: referenceFileName,
-    dimensions: referenceDimensions,
-    error: referenceError,
-    handleFileSelect,
-    handleDrop,
-    handleDragOver,
-    clearFile,
-  } = useImageUpload();
 
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim() || isGenerating) return;
@@ -35,7 +23,6 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: prompt.trim(),
-          referenceImage: referencePreview || undefined,
         }),
       });
 
@@ -77,14 +64,6 @@ export default function Home() {
           <InputPanel
             prompt={prompt}
             onPromptChange={setPrompt}
-            referencePreview={referencePreview}
-            referenceFileName={referenceFileName}
-            referenceDimensions={referenceDimensions}
-            referenceError={referenceError}
-            onFileSelect={handleFileSelect}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onClearReference={clearFile}
             onGenerate={handleGenerate}
             isGenerating={isGenerating}
           />
