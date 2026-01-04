@@ -9,11 +9,11 @@ interface SplitViewProps {
 
 export function SplitView({ left, right, className }: SplitViewProps) {
   return (
-    <div className={cn("flex flex-col lg:flex-row min-h-[calc(100vh-64px)]", className)}>
-      <div className="w-full lg:w-1/2 border-b lg:border-b-0 lg:border-r border-[var(--border)]">
+    <div className={cn("flex flex-col lg:flex-row min-h-[calc(100vh-80px)]", className)}>
+      <div className="w-full lg:w-[45%]">
         {left}
       </div>
-      <div className="w-full lg:w-1/2 bg-[var(--bg-secondary)]">
+      <div className="w-full lg:w-[55%] bg-[var(--bg-secondary)]">
         {right}
       </div>
     </div>

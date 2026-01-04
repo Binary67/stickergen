@@ -15,6 +15,8 @@ export default function Home() {
 
   const {
     preview: referencePreview,
+    fileName: referenceFileName,
+    dimensions: referenceDimensions,
     error: referenceError,
     handleFileSelect,
     handleDrop,
@@ -76,6 +78,8 @@ export default function Home() {
             prompt={prompt}
             onPromptChange={setPrompt}
             referencePreview={referencePreview}
+            referenceFileName={referenceFileName}
+            referenceDimensions={referenceDimensions}
             referenceError={referenceError}
             onFileSelect={handleFileSelect}
             onDrop={handleDrop}

@@ -10,10 +10,15 @@ interface PromptInputProps {
 
 export function PromptInput({ value, onChange, maxLength = 500 }: PromptInputProps) {
   return (
-    <div className="space-y-2">
-      <label className="block text-sm font-medium text-[var(--text-primary)]">
-        Describe your sticker
-      </label>
+    <div className="space-y-3">
+      <div className="flex items-baseline justify-between">
+        <label className="text-sm font-normal text-[var(--text-secondary)]">
+          Describe your sticker
+        </label>
+        <span className="text-xs text-[var(--text-secondary)] tabular-nums">
+          {value.length}/{maxLength}
+        </span>
+      </div>
       <Textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -22,11 +27,6 @@ export function PromptInput({ value, onChange, maxLength = 500 }: PromptInputPro
         maxLength={maxLength}
         autoResize
       />
-      <div className="flex justify-end">
-        <span className="text-xs text-[var(--text-secondary)]">
-          {value.length}/{maxLength}
-        </span>
-      </div>
     </div>
   );
 }

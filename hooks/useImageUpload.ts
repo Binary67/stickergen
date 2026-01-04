@@ -2,9 +2,16 @@
 
 import { useState, useCallback } from "react";
 
+interface ImageDimensions {
+  width: number;
+  height: number;
+}
+
 interface UseImageUploadReturn {
   file: File | null;
   preview: string | null;
+  fileName: string | null;
+  dimensions: ImageDimensions | null;
   error: string | null;
   handleFileSelect: (file: File | null) => void;
   handleDrop: (e: React.DragEvent) => void;
@@ -18,6 +25,8 @@ const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 export function useImageUpload(): UseImageUploadReturn {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [dimensions, setDimensions] = useState<ImageDimensions | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const validateFile = useCallback((file: File): string | null => {
@@ -36,6 +45,8 @@ export function useImageUpload(): UseImageUploadReturn {
     if (!selectedFile) {
       setFile(null);
       setPreview(null);
+      setFileName(null);
+      setDimensions(null);
       return;
     }
 
@@ -46,11 +57,20 @@ export function useImageUpload(): UseImageUploadReturn {
     }
 
     setFile(selectedFile);
+    setFileName(selectedFile.name);
 
-    // Create preview URL
+    // Create preview URL and extract dimensions
     const reader = new FileReader();
     reader.onloadend = () => {
-      setPreview(reader.result as string);
+      const dataUrl = reader.result as string;
+      setPreview(dataUrl);
+
+      // Extract image dimensions
+      const img = new Image();
+      img.onload = () => {
+        setDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+      };
+      img.src = dataUrl;
     };
     reader.readAsDataURL(selectedFile);
   }, [validateFile]);
@@ -73,12 +93,16 @@ export function useImageUpload(): UseImageUploadReturn {
   const clearFile = useCallback(() => {
     setFile(null);
     setPreview(null);
+    setFileName(null);
+    setDimensions(null);
     setError(null);
   }, []);
 
   return {
     file,
     preview,
+    fileName,
+    dimensions,
     error,
     handleFileSelect,
     handleDrop,
