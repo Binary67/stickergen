@@ -11,10 +11,23 @@ export default function Home() {
   const [prompt, setPrompt] = useState("");
   const [sticker, setSticker] = useState<Sticker | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
+  const [characterError, setCharacterError] = useState(false);
+
+  const handleCharacterSelect = useCallback((id: string) => {
+    setSelectedCharacterId(id);
+    setCharacterError(false);
+  }, []);
 
   const handleGenerate = useCallback(async () => {
+    if (!selectedCharacterId) {
+      setCharacterError(true);
+      return;
+    }
+
     if (!prompt.trim() || isGenerating) return;
 
+    setCharacterError(false);
     setIsGenerating(true);
 
     try {
@@ -23,6 +36,7 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: prompt.trim(),
+          characterId: selectedCharacterId,
         }),
       });
 
@@ -45,7 +59,7 @@ export default function Home() {
     } finally {
       setIsGenerating(false);
     }
-  }, [prompt, isGenerating]);
+  }, [prompt, selectedCharacterId, isGenerating]);
 
   const handleDownload = useCallback((stickerToDownload: Sticker) => {
     const link = document.createElement("a");
@@ -64,8 +78,11 @@ export default function Home() {
           <InputPanel
             prompt={prompt}
             onPromptChange={setPrompt}
+            selectedCharacterId={selectedCharacterId}
+            onCharacterSelect={handleCharacterSelect}
             onGenerate={handleGenerate}
             isGenerating={isGenerating}
+            characterError={characterError}
           />
         }
         right={

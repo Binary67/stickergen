@@ -3,10 +3,15 @@ import { promises as fs } from "fs";
 import path from "path";
 
 interface CharacterConfig {
+  id: string;
   name: string;
   description: string;
   images: string[];
   identityPrompt: string;
+}
+
+interface CharactersConfig {
+  characters: CharacterConfig[];
 }
 
 interface OpenRouterImageResponse {
@@ -38,25 +43,30 @@ const SAFETY_SETTINGS = [
   { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" },
 ];
 
-// Cache for character config and images
-let cachedConfig: CharacterConfig | null = null;
-let cachedImages: string[] | null = null;
+// Cache for characters config and images per character
+let cachedCharacters: CharactersConfig | null = null;
+const cachedImages: Map<string, string[]> = new Map();
 
-async function loadCharacterConfig(): Promise<CharacterConfig> {
-  if (cachedConfig) return cachedConfig;
+async function loadCharactersConfig(): Promise<CharactersConfig> {
+  if (cachedCharacters) return cachedCharacters;
 
   const configPath = path.join(process.cwd(), "public", "characters", "characters.json");
   const configContent = await fs.readFile(configPath, "utf-8");
-  cachedConfig = JSON.parse(configContent) as CharacterConfig;
-  return cachedConfig;
+  cachedCharacters = JSON.parse(configContent) as CharactersConfig;
+  return cachedCharacters;
 }
 
-async function loadCharacterImages(config: CharacterConfig): Promise<string[]> {
-  if (cachedImages) return cachedImages;
+function findCharacterById(config: CharactersConfig, id: string): CharacterConfig | undefined {
+  return config.characters.find((c) => c.id === id);
+}
+
+async function loadCharacterImages(character: CharacterConfig): Promise<string[]> {
+  const cached = cachedImages.get(character.id);
+  if (cached) return cached;
 
   const images: string[] = [];
 
-  for (const imagePath of config.images) {
+  for (const imagePath of character.images) {
     try {
       const fullPath = path.join(process.cwd(), "public", imagePath);
       const imageBuffer = await fs.readFile(fullPath);
@@ -76,7 +86,7 @@ async function loadCharacterImages(config: CharacterConfig): Promise<string[]> {
     }
   }
 
-  cachedImages = images;
+  cachedImages.set(character.id, images);
   return images;
 }
 
@@ -108,11 +118,18 @@ STICKER REQUIREMENTS:
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt } = await request.json();
+    const { prompt, characterId } = await request.json();
 
     if (!prompt || typeof prompt !== "string") {
       return NextResponse.json(
         { success: false, error: "Prompt is required" },
+        { status: 400 }
+      );
+    }
+
+    if (!characterId || typeof characterId !== "string") {
+      return NextResponse.json(
+        { success: false, error: "Character selection is required" },
         { status: 400 }
       );
     }
@@ -125,9 +142,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Load character configuration and images
-    const config = await loadCharacterConfig();
-    const referenceImages = await loadCharacterImages(config);
+    // Load characters configuration and find selected character
+    const charactersConfig = await loadCharactersConfig();
+    const character = findCharacterById(charactersConfig, characterId);
+
+    if (!character) {
+      return NextResponse.json(
+        { success: false, error: "Invalid character selected" },
+        { status: 400 }
+      );
+    }
+
+    const referenceImages = await loadCharacterImages(character);
 
     if (referenceImages.length === 0) {
       return NextResponse.json(
@@ -136,7 +162,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const systemPrompt = buildSystemPrompt(config);
+    const systemPrompt = buildSystemPrompt(character);
     const fullPromptText = `${systemPrompt}\n\nUser request: ${prompt}`;
 
     // Build multimodal message content with all reference images

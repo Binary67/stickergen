@@ -2,23 +2,29 @@
 
 import { Button } from "@/components/ui/Button";
 import { PromptInput } from "./PromptInput";
-import { CharacterDisplay } from "./CharacterDisplay";
+import { CharacterSelector } from "./CharacterSelector";
 import { Sparkles } from "lucide-react";
 
 interface InputPanelProps {
   prompt: string;
   onPromptChange: (value: string) => void;
+  selectedCharacterId: string | null;
+  onCharacterSelect: (id: string) => void;
   onGenerate: () => void;
   isGenerating: boolean;
+  characterError: boolean;
 }
 
 export function InputPanel({
   prompt,
   onPromptChange,
+  selectedCharacterId,
+  onCharacterSelect,
   onGenerate,
   isGenerating,
+  characterError,
 }: InputPanelProps) {
-  const canGenerate = prompt.trim().length > 0 && !isGenerating;
+  const canGenerate = prompt.trim().length > 0 && selectedCharacterId !== null && !isGenerating;
 
   return (
     <div className="h-full flex flex-col p-8 lg:p-10">
@@ -28,7 +34,11 @@ export function InputPanel({
           onChange={onPromptChange}
         />
 
-        <CharacterDisplay />
+        <CharacterSelector
+          selectedCharacterId={selectedCharacterId}
+          onSelect={onCharacterSelect}
+          hasError={characterError}
+        />
       </div>
 
       <div className="pt-8 mt-auto flex justify-center">
