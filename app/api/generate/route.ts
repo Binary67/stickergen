@@ -1,18 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
-
-interface CharacterConfig {
-  id: string;
-  name: string;
-  description: string;
-  images: string[];
-  identityPrompt: string;
-}
-
-interface CharactersConfig {
-  characters: CharacterConfig[];
-}
+import type { Character, CharactersConfig } from "@/types";
 
 interface OpenRouterImageResponse {
   choices: Array<{
@@ -56,11 +45,11 @@ async function loadCharactersConfig(): Promise<CharactersConfig> {
   return cachedCharacters;
 }
 
-function findCharacterById(config: CharactersConfig, id: string): CharacterConfig | undefined {
+function findCharacterById(config: CharactersConfig, id: string): Character | undefined {
   return config.characters.find((c) => c.id === id);
 }
 
-async function loadCharacterImages(character: CharacterConfig): Promise<string[]> {
+async function loadCharacterImages(character: Character): Promise<string[]> {
   const cached = cachedImages.get(character.id);
   if (cached) return cached;
 
@@ -90,7 +79,7 @@ async function loadCharacterImages(character: CharacterConfig): Promise<string[]
   return images;
 }
 
-function buildSystemPrompt(config: CharacterConfig): string {
+function buildSystemPrompt(config: Character): string {
   return `You are a sticker designer. Generate a single sticker image based on the reference images and user's description.
 
 ${config.identityPrompt}
