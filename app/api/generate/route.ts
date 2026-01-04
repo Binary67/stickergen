@@ -80,7 +80,7 @@ async function loadCharacterImages(character: Character): Promise<string[]> {
 }
 
 function buildSystemPrompt(config: Character): string {
-  return `You are a sticker designer. Generate a single sticker image based on the reference images and user's description.
+  return `You are a kawaii illustration artist. Generate a single cute character illustration based on the reference images and user's description.
 
 ${config.identityPrompt}
 
@@ -97,11 +97,14 @@ ACTION/POSE (DO NOT COPY FROM REFERENCE):
 - Use the pose/action described in the user's prompt instead
 - The characters should perform what the user describes, not what they're doing in the references
 
-STICKER REQUIREMENTS:
+IMAGE REQUIREMENTS:
 - Generate ONE unified scene, NOT split panels or multiple frames
-- Include an appropriate background that complements the scene or action
-- Use bold outlines and vibrant colors suitable for stickers
-- The design should be centered and fill the frame well
+- IMPORTANT: The background MUST fill the ENTIRE square canvas edge-to-edge, including all four corners
+- Use solid colors, soft pastels, or gradients for the background - no transparency anywhere
+- Do NOT create rounded corners, soft edges, or fade-outs at the edges
+- The image must be a complete rectangle with color reaching every pixel of the frame
+- Use bold outlines and vibrant colors in chibi/kawaii style
+- The characters should be centered within the scene
 - No text unless specifically requested`;
 }
 
