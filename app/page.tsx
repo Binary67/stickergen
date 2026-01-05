@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { Header } from "@/components/layout/Header";
-import { SplitView } from "@/components/layout/SplitView";
+import { VerticalLayout } from "@/components/layout/VerticalLayout";
 import { InputPanel } from "@/components/input/InputPanel";
 import { OutputPanel } from "@/components/output/OutputPanel";
 import type { Sticker, GenerateResponse } from "@/types";
@@ -73,26 +73,22 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[var(--bg-primary)]">
       <Header />
-      <SplitView
-        left={
-          <InputPanel
-            prompt={prompt}
-            onPromptChange={setPrompt}
-            selectedCharacterId={selectedCharacterId}
-            onCharacterSelect={handleCharacterSelect}
-            onGenerate={handleGenerate}
-            isGenerating={isGenerating}
-            characterError={characterError}
-          />
-        }
-        right={
-          <OutputPanel
-            sticker={sticker}
-            isGenerating={isGenerating}
-            onDownload={handleDownload}
-          />
-        }
-      />
+      <VerticalLayout>
+        <InputPanel
+          prompt={prompt}
+          onPromptChange={setPrompt}
+          selectedCharacterId={selectedCharacterId}
+          onCharacterSelect={handleCharacterSelect}
+          onGenerate={handleGenerate}
+          isGenerating={isGenerating}
+          characterError={characterError}
+        />
+        <OutputPanel
+          sticker={sticker}
+          isGenerating={isGenerating}
+          onDownload={handleDownload}
+        />
+      </VerticalLayout>
     </div>
   );
 }

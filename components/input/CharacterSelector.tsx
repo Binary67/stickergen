@@ -47,7 +47,7 @@ export function CharacterSelector({
         {characters.length === 0 ? (
           <div className="text-sm text-[var(--text-secondary)]">Loading...</div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
             {characters.map((character) => {
               const isSelected = selectedCharacterId === character.id;
               const iconPath = `/${character.icon}`;
@@ -58,15 +58,15 @@ export function CharacterSelector({
                   key={character.id}
                   type="button"
                   onClick={() => onSelect(character.id)}
-                  className={`flex flex-col items-center p-3 rounded-xl border-2 transition-all duration-200 cursor-pointer ${
+                  className={`flex-shrink-0 flex flex-col items-center p-3 rounded-xl border-2 transition-all duration-200 cursor-pointer min-w-[100px] ${
                     isSelected
                       ? "border-[var(--accent)] bg-[var(--accent)]/5"
                       : "border-transparent bg-white hover:border-[var(--accent)]/50"
                   }`}
                 >
-                  <div className="w-14 h-14 rounded-full overflow-hidden bg-[var(--accent)]/10 flex items-center justify-center mb-2">
+                  <div className="w-12 h-12 rounded-full overflow-hidden bg-[var(--accent)]/10 flex items-center justify-center mb-2">
                     {hasImageError ? (
-                      <Users className="w-7 h-7 text-[var(--accent)]" />
+                      <Users className="w-6 h-6 text-[var(--accent)]" />
                     ) : (
                       <img
                         src={iconPath}
@@ -76,11 +76,11 @@ export function CharacterSelector({
                       />
                     )}
                   </div>
-                  <p className="text-sm font-medium text-[var(--text-primary)] text-center">
+                  <p className="text-xs font-medium text-[var(--text-primary)] text-center whitespace-nowrap">
                     {character.name}
                   </p>
                   <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-                    {character.images.length} reference{character.images.length !== 1 ? "s" : ""}
+                    {character.images.length} ref{character.images.length !== 1 ? "s" : ""}
                   </p>
                 </button>
               );

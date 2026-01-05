@@ -27,21 +27,19 @@ export function InputPanel({
   const canGenerate = prompt.trim().length > 0 && selectedCharacterId !== null && !isGenerating;
 
   return (
-    <div className="h-full flex flex-col p-8 lg:p-10">
-      <div className="flex-1 space-y-8">
-        <PromptInput
-          value={prompt}
-          onChange={onPromptChange}
-        />
+    <div className="space-y-6">
+      <CharacterSelector
+        selectedCharacterId={selectedCharacterId}
+        onSelect={onCharacterSelect}
+        hasError={characterError}
+      />
 
-        <CharacterSelector
-          selectedCharacterId={selectedCharacterId}
-          onSelect={onCharacterSelect}
-          hasError={characterError}
-        />
-      </div>
+      <PromptInput
+        value={prompt}
+        onChange={onPromptChange}
+      />
 
-      <div className="pt-8 mt-auto flex justify-center">
+      <div className="flex justify-center pt-2">
         <Button
           onClick={onGenerate}
           disabled={!canGenerate}
