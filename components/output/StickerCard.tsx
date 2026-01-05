@@ -14,17 +14,17 @@ export function StickerCard({ sticker, onDownload }: StickerCardProps) {
     <div className="group relative">
       <div
         className={cn(
-          "w-64 h-64 rounded-[var(--radius-card)]",
+          "rounded-[var(--radius-card)]",
           "overflow-hidden shadow-[var(--shadow)]",
           "transition-transform duration-200",
           "group-hover:scale-[1.02]"
         )}
       >
-        <div className="checkered-bg w-full h-full flex items-center justify-center p-4">
+        <div className="checkered-bg">
           <img
             src={sticker.imageUrl}
             alt={sticker.prompt}
-            className="max-w-full max-h-full object-contain"
+            className="block"
           />
         </div>
       </div>
