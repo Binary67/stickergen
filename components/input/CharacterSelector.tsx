@@ -79,9 +79,6 @@ export function CharacterSelector({
                   <p className="text-xs font-medium text-[var(--text-primary)] text-center whitespace-nowrap">
                     {character.name}
                   </p>
-                  <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-                    {character.images.length} ref{character.images.length !== 1 ? "s" : ""}
-                  </p>
                 </button>
               );
             })}
