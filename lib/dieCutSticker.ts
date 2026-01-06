@@ -11,6 +11,34 @@ function hexToRgb(hex: string): [number, number, number] | null {
   return [r, g, b];
 }
 
+function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
+  const rNorm = r / 255;
+  const gNorm = g / 255;
+  const bNorm = b / 255;
+
+  const max = Math.max(rNorm, gNorm, bNorm);
+  const min = Math.min(rNorm, gNorm, bNorm);
+  const l = (max + min) / 2;
+
+  if (max === min) {
+    return [0, 0, l]; // achromatic
+  }
+
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+
+  let h = 0;
+  if (max === rNorm) {
+    h = ((gNorm - bNorm) / d + (gNorm < bNorm ? 6 : 0)) / 6;
+  } else if (max === gNorm) {
+    h = ((bNorm - rNorm) / d + 2) / 6;
+  } else {
+    h = ((rNorm - gNorm) / d + 4) / 6;
+  }
+
+  return [h * 360, s, l]; // hue in degrees, saturation and lightness 0-1
+}
+
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -22,24 +50,34 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 
 function clearKeyColorFromEdges(
   imageData: ImageData,
-  keyRgb: [number, number, number],
-  tolerance: number
+  _keyRgb: [number, number, number],
+  _tolerance: number
 ) {
   const { data, width, height } = imageData;
-  const [kr, kg, kb] = keyRgb;
-  const tolSq = tolerance * tolerance;
   const visited = new Uint8Array(width * height);
   const stack = new Int32Array(width * height);
   let sp = 0;
 
+  // Green hue range: approximately 80-160 degrees (covers lime to teal)
+  const hueMin = 80;
+  const hueMax = 160;
+  const saturationMin = 0.25; // Must have some color saturation
+  const lightnessMin = 0.15; // Not too dark
+  const lightnessMax = 0.85; // Not too bright/white
+
   const isKey = (pixelIndex: number) => {
     const i = pixelIndex * 4;
     const a = data[i + 3];
-    if (a === 0) return true;
-    const dr = data[i] - kr;
-    const dg = data[i + 1] - kg;
-    const db = data[i + 2] - kb;
-    return dr * dr + dg * dg + db * db <= tolSq;
+    if (a === 0) return true; // Transparent pixels are always "key"
+
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+
+    const [h, s, l] = rgbToHsl(r, g, b);
+
+    // Check if pixel is in the green hue range with sufficient saturation
+    return h >= hueMin && h <= hueMax && s >= saturationMin && l >= lightnessMin && l <= lightnessMax;
   };
 
   const pushIfKey = (pixelIndex: number) => {

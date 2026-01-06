@@ -47,7 +47,7 @@ export function CharacterSelector({
         {characters.length === 0 ? (
           <div className="text-sm text-[var(--text-secondary)]">Loading...</div>
         ) : (
-          <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-1">
+          <div className="flex gap-4 overflow-x-auto scrollbar-hide p-1">
             {characters.map((character) => {
               const isSelected = selectedCharacterId === character.id;
               const iconPath = `/${character.icon}`;
