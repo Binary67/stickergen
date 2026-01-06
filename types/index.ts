@@ -2,6 +2,7 @@ export interface Sticker {
   id: string;
   imageUrl: string;
   prompt: string;
+  caption?: string;
   createdAt: Date;
 }
 
@@ -31,5 +32,8 @@ export interface GenerateRequest {
 export interface GenerateResponse {
   imageUrl: string;
   success: boolean;
+  caption?: string;
+  captionPlacement?: "bottom" | "top" | "bubble";
+  keyBackgroundColor?: string;
   error?: string;
 }

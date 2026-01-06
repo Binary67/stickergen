@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/Header";
 import { VerticalLayout } from "@/components/layout/VerticalLayout";
 import { InputPanel } from "@/components/input/InputPanel";
 import { OutputPanel } from "@/components/output/OutputPanel";
+import { createDieCutSticker } from "@/lib/dieCutSticker";
 import type { Sticker, GenerateResponse } from "@/types";
 
 export default function Home() {
@@ -46,10 +47,18 @@ export default function Home() {
         throw new Error(data.error || "Generation failed");
       }
 
+      const processedImageUrl = await createDieCutSticker({
+        sourceImageUrl: data.imageUrl,
+        keyBackgroundColor: data.keyBackgroundColor,
+        caption: data.caption,
+        captionPlacement: data.captionPlacement,
+      });
+
       const newSticker: Sticker = {
         id: Date.now().toString(),
-        imageUrl: data.imageUrl,
+        imageUrl: processedImageUrl,
         prompt: prompt.trim(),
+        caption: data.caption,
         createdAt: new Date(),
       };
 

@@ -25,8 +25,10 @@ interface OpenRouterImageResponse {
   };
 }
 
+const KEY_BACKGROUND_COLOR_HEX = "#00FF00";
+
 const SAFETY_SETTINGS = [
-  { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
+  { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" }, 
   { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
   { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
   { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" },
@@ -80,7 +82,7 @@ async function loadCharacterImages(character: Character): Promise<string[]> {
 }
 
 function buildSystemPrompt(config: Character): string {
-  return `You are a kawaii illustration artist. Generate a single cute character illustration based on the reference images and user's description.
+  return `You are a kawaii sticker illustrator. Create a single die-cut style character sticker based on the reference images and the user's description.
 
 ${config.identityPrompt}
 
@@ -93,19 +95,81 @@ CHARACTER IDENTITY (PRESERVE THESE):
 - Overall art style and character design
 
 ACTION/POSE (DO NOT COPY FROM REFERENCE):
-- Ignore the pose, gesture, or action shown in the reference images
+- Ignore the pose, gesture, or action shown in the reference images       
 - Use the pose/action described in the user's prompt instead
 - The characters should perform what the user describes, not what they're doing in the references
 
-IMAGE REQUIREMENTS:
-- Generate ONE unified scene, NOT split panels or multiple frames
-- IMPORTANT: The background MUST fill the ENTIRE square canvas edge-to-edge, including all four corners
-- Use solid colors, soft pastels, or gradients for the background - no transparency anywhere
-- Do NOT create rounded corners, soft edges, or fade-outs at the edges
-- The image must be a complete rectangle with color reaching every pixel of the frame
-- Use bold outlines and vibrant colors in chibi/kawaii style
-- The characters should be centered within the scene
-- No text unless specifically requested`;
+STICKER COMPOSITION:
+- Focus on the character(s) only: no scenery, no background objects, no frames
+- Center the character(s) with comfortable empty space around them (sticker padding)
+- Keep the design bold, readable, and clean in chibi/kawaii style
+
+BACKGROUND (IMPORTANT FOR POST-PROCESSING):
+- Use a perfectly solid, flat background color: ${KEY_BACKGROUND_COLOR_HEX}
+- No gradients, patterns, textures, shadows, vignettes, or lighting on the background
+- Do NOT use ${KEY_BACKGROUND_COLOR_HEX} anywhere on the character(s), props, or outlines
+
+CAPTION (OPTIONAL, CREATIVE):
+- You may suggest a short caption ONLY if it strongly fits the user request and looks like a sticker caption
+- Keep it 1–4 words, simple and punchy; otherwise set it to null
+- Do NOT render any text in the image (text will be added later)
+- Return ONLY valid JSON (no markdown) in your text response in this exact shape:
+  {"caption": string | null, "captionPlacement": "bottom" | "top" | "bubble"}
+
+OUTPUT:
+- Generate exactly one image.`;
+}
+
+function parseCaptionSuggestion(content: string | undefined): {
+  caption?: string;
+  captionPlacement?: "bottom" | "top" | "bubble";
+} {
+  if (!content) return {};
+
+  const match = content.match(/\{[\s\S]*\}/);
+  if (!match) return {};
+
+  try {
+    const parsed = JSON.parse(match[0]) as {
+      caption?: unknown;
+      captionPlacement?: unknown;
+    };
+
+    const caption =
+      typeof parsed.caption === "string"
+        ? parsed.caption.trim()
+        : parsed.caption === null
+          ? undefined
+          : undefined;
+
+    const captionPlacement =
+      parsed.captionPlacement === "bottom" ||
+      parsed.captionPlacement === "top" ||
+      parsed.captionPlacement === "bubble"
+        ? parsed.captionPlacement
+        : undefined;
+
+    return {
+      caption: caption && caption.length > 0 ? caption : undefined,
+      captionPlacement,
+    };
+  } catch {
+    return {};
+  }
+}
+
+async function coerceImageUrlToDataUrl(url: string): Promise<string> {
+  if (url.startsWith("data:")) return url;
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch generated image: ${response.status}`);
+  }
+
+  const contentType = response.headers.get("content-type") || "image/png";
+  const arrayBuffer = await response.arrayBuffer();
+  const base64 = Buffer.from(arrayBuffer).toString("base64");
+  return `data:${contentType};base64,${base64}`;
 }
 
 export async function POST(request: NextRequest) {
@@ -232,10 +296,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const imageUrl = images[0].image_url.url;
+    const imageUrl = await coerceImageUrlToDataUrl(images[0].image_url.url);
+    const { caption, captionPlacement } = parseCaptionSuggestion(
+      data.choices?.[0]?.message?.content
+    );
 
     return NextResponse.json({
       imageUrl,
+      caption,
+      captionPlacement,
+      keyBackgroundColor: KEY_BACKGROUND_COLOR_HEX,
       success: true,
     });
   } catch (error) {
