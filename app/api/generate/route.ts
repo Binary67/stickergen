@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { promises as fs } from "fs";
-import path from "path";
 import type { Character, CharactersConfig } from "@/types";
+import charactersData from "@/public/characters/characters.json";
 
 interface OpenRouterImageResponse {
   choices: Array<{
@@ -34,24 +33,36 @@ const SAFETY_SETTINGS = [
   { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" },
 ];
 
-// Cache for characters config and images per character
-let cachedCharacters: CharactersConfig | null = null;
+// Cache for loaded images per character
 const cachedImages: Map<string, string[]> = new Map();
 
-async function loadCharactersConfig(): Promise<CharactersConfig> {
-  if (cachedCharacters) return cachedCharacters;
+// Use imported JSON directly (bundled with the serverless function)
+const charactersConfig: CharactersConfig = charactersData as CharactersConfig;
 
-  const configPath = path.join(process.cwd(), "public", "characters", "characters.json");
-  const configContent = await fs.readFile(configPath, "utf-8");
-  cachedCharacters = JSON.parse(configContent) as CharactersConfig;
-  return cachedCharacters;
+function getBaseUrl(request: NextRequest): string {
+  // Use VERCEL_URL if available (set automatically by Vercel)
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  // Fallback for local development
+  const host = request.headers.get("host") || "localhost:3000";
+  const protocol = host.includes("localhost") ? "http" : "https";
+  return `${protocol}://${host}`;
 }
 
 function findCharacterById(config: CharactersConfig, id: string): Character | undefined {
   return config.characters.find((c) => c.id === id);
 }
 
-async function loadCharacterImages(character: Character): Promise<string[]> {
+function getMimeType(imagePath: string): string {
+  const ext = imagePath.toLowerCase().split(".").pop();
+  if (ext === "png") return "image/png";
+  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
+  if (ext === "webp") return "image/webp";
+  return "image/png";
+}
+
+async function loadCharacterImages(baseUrl: string, character: Character): Promise<string[]> {
   const cached = cachedImages.get(character.id);
   if (cached) return cached;
 
@@ -59,17 +70,15 @@ async function loadCharacterImages(character: Character): Promise<string[]> {
 
   for (const imagePath of character.images) {
     try {
-      const fullPath = path.join(process.cwd(), "public", imagePath);
-      const imageBuffer = await fs.readFile(fullPath);
-      const base64 = imageBuffer.toString("base64");
+      const response = await fetch(`${baseUrl}/${imagePath}`);
+      if (!response.ok) {
+        console.warn(`Failed to load image: ${imagePath} (${response.status})`);
+        continue;
+      }
 
-      // Determine MIME type from extension
-      const ext = path.extname(imagePath).toLowerCase();
-      const mimeType =
-        ext === ".png" ? "image/png" :
-        ext === ".jpg" || ext === ".jpeg" ? "image/jpeg" :
-        ext === ".webp" ? "image/webp" :
-        "image/png";
+      const arrayBuffer = await response.arrayBuffer();
+      const base64 = Buffer.from(arrayBuffer).toString("base64");
+      const mimeType = getMimeType(imagePath);
 
       images.push(`data:${mimeType};base64,${base64}`);
     } catch (error) {
@@ -198,8 +207,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Load characters configuration and find selected character
-    const charactersConfig = await loadCharactersConfig();
+    // Get base URL for fetching static assets (images)
+    const baseUrl = getBaseUrl(request);
+
+    // Find selected character from imported config
     const character = findCharacterById(charactersConfig, characterId);
 
     if (!character) {
@@ -209,7 +220,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const referenceImages = await loadCharacterImages(character);
+    const referenceImages = await loadCharacterImages(baseUrl, character);
 
     if (referenceImages.length === 0) {
       return NextResponse.json(
