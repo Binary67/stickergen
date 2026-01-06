@@ -15,7 +15,7 @@ export function PromptInput({ value, onChange, maxLength = 500 }: PromptInputPro
         <label className="text-sm font-normal text-[var(--text-secondary)]">
           Describe your sticker
         </label>
-        <span className="text-xs text-[var(--text-secondary)] tabular-nums">
+        <span className="text-xs text-[var(--text-secondary)]/60 tabular-nums">
           {value.length}/{maxLength}
         </span>
       </div>

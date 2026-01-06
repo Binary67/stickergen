@@ -37,7 +37,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           "bg-[var(--bg-secondary)] text-[var(--text-primary)]",
           "border border-transparent rounded-[var(--radius-card)]",
           "placeholder:text-[var(--text-secondary)]",
-          "focus:outline-none focus:bg-[var(--bg-primary)] focus:border-[var(--border)]",
+          "focus:outline-none focus:bg-[var(--bg-primary)] focus:border-[var(--border)] focus:ring-2 focus:ring-[var(--accent)]/10",
           "transition-all duration-200",
           "resize-none",
           className

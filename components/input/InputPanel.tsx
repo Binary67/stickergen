@@ -27,7 +27,7 @@ export function InputPanel({
   const canGenerate = prompt.trim().length > 0 && selectedCharacterId !== null && !isGenerating;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <CharacterSelector
         selectedCharacterId={selectedCharacterId}
         onSelect={onCharacterSelect}
@@ -45,7 +45,7 @@ export function InputPanel({
           disabled={!canGenerate}
           loading={isGenerating}
           size="lg"
-          className="px-8 shadow-sm hover:shadow-md transition-shadow"
+          className="px-8"
         >
           <Sparkles className="w-5 h-5 mr-2" />
           {isGenerating ? "Generating..." : "Generate Sticker"}

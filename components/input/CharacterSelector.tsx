@@ -34,20 +34,20 @@ export function CharacterSelector({
   return (
     <div className="space-y-2">
       <label className="text-sm font-normal text-[var(--text-secondary)]">
-        Characters <span className="text-red-500">*</span>
+        Characters <span className="text-[var(--text-secondary)]/60">*</span>
       </label>
 
       <div
-        className={`p-4 rounded-[var(--radius-card)] border transition-colors duration-200 ${
+        className={`p-5 rounded-[var(--radius-card)] transition-all duration-200 ${
           showError
-            ? "border-red-500 bg-red-50"
-            : "border-[var(--border)] bg-[var(--bg-secondary)]"
+            ? "ring-2 ring-red-500 bg-red-50"
+            : "bg-white shadow-[var(--shadow-card)]"
         }`}
       >
         {characters.length === 0 ? (
           <div className="text-sm text-[var(--text-secondary)]">Loading...</div>
         ) : (
-          <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
+          <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-1">
             {characters.map((character) => {
               const isSelected = selectedCharacterId === character.id;
               const iconPath = `/${character.icon}`;
@@ -58,15 +58,15 @@ export function CharacterSelector({
                   key={character.id}
                   type="button"
                   onClick={() => onSelect(character.id)}
-                  className={`flex-shrink-0 flex flex-col items-center p-3 rounded-xl border-2 transition-all duration-200 cursor-pointer min-w-[100px] ${
+                  className={`flex-shrink-0 flex flex-col items-center p-4 rounded-xl transition-all duration-200 cursor-pointer min-w-[110px] ${
                     isSelected
-                      ? "border-[var(--accent)] bg-[var(--accent)]/5"
-                      : "border-transparent bg-white hover:border-[var(--accent)]/50"
+                      ? "bg-[var(--accent)]/8 ring-2 ring-[var(--accent)] shadow-sm"
+                      : "bg-[var(--bg-secondary)] hover:bg-[var(--bg-secondary)]/80 hover:scale-105 hover:shadow-sm"
                   }`}
                 >
-                  <div className="w-12 h-12 rounded-full overflow-hidden bg-[var(--accent)]/10 flex items-center justify-center mb-2">
+                  <div className="w-14 h-14 rounded-full overflow-hidden bg-white flex items-center justify-center mb-2 shadow-sm">
                     {hasImageError ? (
-                      <Users className="w-6 h-6 text-[var(--accent)]" />
+                      <Users className="w-7 h-7 text-[var(--accent)]" />
                     ) : (
                       <img
                         src={iconPath}
