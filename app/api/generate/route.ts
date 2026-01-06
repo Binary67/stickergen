@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Character, CharactersConfig } from "@/types";
 import charactersData from "@/public/characters/characters.json";
+import { characterImages } from "@/lib/character-images.generated";
 
 interface OpenRouterImageResponse {
   choices: Array<{
@@ -33,61 +34,11 @@ const SAFETY_SETTINGS = [
   { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" },
 ];
 
-// Cache for loaded images per character
-const cachedImages: Map<string, string[]> = new Map();
-
 // Use imported JSON directly (bundled with the serverless function)
 const charactersConfig: CharactersConfig = charactersData as CharactersConfig;
 
-function getBaseUrl(request: NextRequest): string {
-  // Use VERCEL_URL if available (set automatically by Vercel)
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-  // Fallback for local development
-  const host = request.headers.get("host") || "localhost:3000";
-  const protocol = host.includes("localhost") ? "http" : "https";
-  return `${protocol}://${host}`;
-}
-
 function findCharacterById(config: CharactersConfig, id: string): Character | undefined {
   return config.characters.find((c) => c.id === id);
-}
-
-function getMimeType(imagePath: string): string {
-  const ext = imagePath.toLowerCase().split(".").pop();
-  if (ext === "png") return "image/png";
-  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
-  if (ext === "webp") return "image/webp";
-  return "image/png";
-}
-
-async function loadCharacterImages(baseUrl: string, character: Character): Promise<string[]> {
-  const cached = cachedImages.get(character.id);
-  if (cached) return cached;
-
-  const images: string[] = [];
-
-  for (const imagePath of character.images) {
-    try {
-      const response = await fetch(`${baseUrl}/${imagePath}`);
-      if (!response.ok) {
-        console.warn(`Failed to load image: ${imagePath} (${response.status})`);
-        continue;
-      }
-
-      const arrayBuffer = await response.arrayBuffer();
-      const base64 = Buffer.from(arrayBuffer).toString("base64");
-      const mimeType = getMimeType(imagePath);
-
-      images.push(`data:${mimeType};base64,${base64}`);
-    } catch (error) {
-      console.warn(`Failed to load image: ${imagePath}`, error);
-    }
-  }
-
-  cachedImages.set(character.id, images);
-  return images;
 }
 
 function buildSystemPrompt(config: Character): string {
@@ -207,9 +158,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get base URL for fetching static assets (images)
-    const baseUrl = getBaseUrl(request);
-
     // Find selected character from imported config
     const character = findCharacterById(charactersConfig, characterId);
 
@@ -220,7 +168,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const referenceImages = await loadCharacterImages(baseUrl, character);
+    const referenceImages = characterImages[character.id] || [];
 
     if (referenceImages.length === 0) {
       return NextResponse.json(
