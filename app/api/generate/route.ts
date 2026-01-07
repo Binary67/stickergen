@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AzureOpenAI } from "openai";
-import type { Character, CharactersConfig } from "@/types";
+import type { Character, CharactersConfig, OutputMode } from "@/types";
 import charactersData from "@/public/characters/characters.json";
 import { characterImages } from "@/lib/character-images.generated";
 import { config } from "dotenv";
@@ -51,8 +51,8 @@ function findCharacterById(config: CharactersConfig, id: string): Character | un
   return config.characters.find((c) => c.id === id);
 }
 
-function buildSystemPrompt(config: Character): string {
-  return `You are a kawaii sticker illustrator. Create a single die-cut style character sticker based on the reference images and the user's description.
+function buildSystemPrompt(config: Character, outputMode: OutputMode): string {
+  const basePrompt = `You are a kawaii illustration artist. Create an image featuring the character(s) based on the reference images and the user's description.
 
 ${config.identityPrompt}
 
@@ -65,9 +65,12 @@ CHARACTER IDENTITY (PRESERVE THESE):
 - Overall art style and character design
 
 ACTION/POSE (DO NOT COPY FROM REFERENCE):
-- Ignore the pose, gesture, or action shown in the reference images       
+- Ignore the pose, gesture, or action shown in the reference images
 - Use the pose/action described in the user's prompt instead
-- The characters should perform what the user describes, not what they're doing in the references
+- The characters should perform what the user describes, not what they're doing in the references`;
+
+  if (outputMode === "sticker") {
+    return `${basePrompt}
 
 STICKER COMPOSITION:
 - Focus on the character(s) only: no scenery, no background objects, no frames
@@ -82,11 +85,29 @@ BACKGROUND (IMPORTANT FOR POST-PROCESSING):
 OUTPUT:
 - Generate exactly one image
 - Do NOT render any text in the image`;
+  }
+
+  // Full image mode
+  return `${basePrompt}
+
+SCENE COMPOSITION:
+- Generate a complete scene with an appropriate background based on the user's prompt
+- The background should be kawaii/cute style matching the character aesthetic
+- Include relevant environmental details that complement the scene
+- The character(s) should be naturally integrated into the scene
+
+OUTPUT:
+- Generate exactly one image
+- Do NOT render any text in the image`;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt, characterId } = await request.json();
+    const { prompt, characterId, outputMode = "sticker" } = await request.json() as {
+      prompt: string;
+      characterId: string;
+      outputMode?: OutputMode;
+    };
 
     if (!prompt || typeof prompt !== "string") {
       return NextResponse.json(
@@ -132,7 +153,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const systemPrompt = buildSystemPrompt(character);
+    const systemPrompt = buildSystemPrompt(character, outputMode);
     const fullPromptText = `${systemPrompt}\n\nUser request: ${prompt}`;
 
     // Convert reference images to File objects for SDK
@@ -168,8 +189,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       imageUrl,
-      keyBackgroundColor: KEY_BACKGROUND_COLOR_HEX,
       success: true,
+      outputMode,
+      // Only include keyBackgroundColor for sticker mode (needed for post-processing)
+      ...(outputMode === "sticker" && { keyBackgroundColor: KEY_BACKGROUND_COLOR_HEX }),
     });
   } catch (error) {
     console.error("Generation error:", error);

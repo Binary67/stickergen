@@ -1,3 +1,5 @@
+export type OutputMode = 'sticker' | 'fullImage';
+
 export interface Sticker {
   id: string;
   imageUrl: string;
@@ -27,6 +29,7 @@ export interface GenerationState {
 export interface GenerateRequest {
   prompt: string;
   characterId: string;
+  outputMode: OutputMode;
 }
 
 export interface GenerateResponse {
@@ -35,5 +38,6 @@ export interface GenerateResponse {
   caption?: string;
   captionPlacement?: "bottom" | "top" | "bubble";
   keyBackgroundColor?: string;
+  outputMode?: OutputMode;
   error?: string;
 }

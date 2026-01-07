@@ -6,7 +6,7 @@ import { VerticalLayout } from "@/components/layout/VerticalLayout";
 import { InputPanel } from "@/components/input/InputPanel";
 import { OutputPanel } from "@/components/output/OutputPanel";
 import { createDieCutSticker } from "@/lib/dieCutSticker";
-import type { Sticker, GenerateResponse } from "@/types";
+import type { Sticker, GenerateResponse, OutputMode } from "@/types";
 
 export default function Home() {
   const [prompt, setPrompt] = useState("");
@@ -14,6 +14,7 @@ export default function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
   const [characterError, setCharacterError] = useState(false);
+  const [outputMode, setOutputMode] = useState<OutputMode>("sticker");
 
   const handleCharacterSelect = useCallback((id: string) => {
     setSelectedCharacterId(id);
@@ -38,6 +39,7 @@ export default function Home() {
         body: JSON.stringify({
           prompt: prompt.trim(),
           characterId: selectedCharacterId,
+          outputMode,
         }),
       });
 
@@ -47,18 +49,19 @@ export default function Home() {
         throw new Error(data.error || "Generation failed");
       }
 
-      const processedImageUrl = await createDieCutSticker({
-        sourceImageUrl: data.imageUrl,
-        keyBackgroundColor: data.keyBackgroundColor,
-        caption: data.caption,
-        captionPlacement: data.captionPlacement,
-      });
+      // Only apply die-cut processing for sticker mode
+      const finalImageUrl =
+        outputMode === "sticker"
+          ? await createDieCutSticker({
+              sourceImageUrl: data.imageUrl,
+              keyBackgroundColor: data.keyBackgroundColor,
+            })
+          : data.imageUrl;
 
       const newSticker: Sticker = {
         id: Date.now().toString(),
-        imageUrl: processedImageUrl,
+        imageUrl: finalImageUrl,
         prompt: prompt.trim(),
-        caption: data.caption,
         createdAt: new Date(),
       };
 
@@ -68,7 +71,7 @@ export default function Home() {
     } finally {
       setIsGenerating(false);
     }
-  }, [prompt, selectedCharacterId, isGenerating]);
+  }, [prompt, selectedCharacterId, isGenerating, outputMode]);
 
   const handleDownload = useCallback((stickerToDownload: Sticker) => {
     const link = document.createElement("a");
@@ -88,6 +91,8 @@ export default function Home() {
           onPromptChange={setPrompt}
           selectedCharacterId={selectedCharacterId}
           onCharacterSelect={handleCharacterSelect}
+          outputMode={outputMode}
+          onOutputModeChange={setOutputMode}
           onGenerate={handleGenerate}
           isGenerating={isGenerating}
           characterError={characterError}
