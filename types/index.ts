@@ -41,3 +41,12 @@ export interface GenerateResponse {
   outputMode?: OutputMode;
   error?: string;
 }
+
+export interface StreamingEvent {
+  type: "partial" | "final" | "error";
+  image?: string;
+  index?: number;
+  keyBackgroundColor?: string;
+  outputMode?: OutputMode;
+  error?: string;
+}

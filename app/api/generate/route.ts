@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AzureOpenAI } from "openai";
-import type { Character, CharactersConfig, OutputMode } from "@/types";
+import type { Character, CharactersConfig, OutputMode, StreamingEvent } from "@/types";
 import charactersData from "@/public/characters/characters.json";
 import { characterImages } from "@/lib/character-images.generated";
 import { config } from "dotenv";
@@ -102,106 +102,147 @@ OUTPUT:
 }
 
 export async function POST(request: NextRequest) {
+  // Parse and validate request body upfront
+  let prompt: string;
+  let characterId: string;
+  let outputMode: OutputMode = "sticker";
+
   try {
-    const { prompt, characterId, outputMode = "sticker" } = await request.json() as {
-      prompt: string;
-      characterId: string;
-      outputMode?: OutputMode;
-    };
-
-    if (!prompt || typeof prompt !== "string") {
-      return NextResponse.json(
-        { success: false, error: "Prompt is required" },
-        { status: 400 }
-      );
-    }
-
-    if (!characterId || typeof characterId !== "string") {
-      return NextResponse.json(
-        { success: false, error: "Character selection is required" },
-        { status: 400 }
-      );
-    }
-
-    const apiKey = process.env.AZURE_OPENAI_API_KEY;
-    const azureEndpoint = process.env.AZURE_OPENAI_ENDPOINT;
-    const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "gpt-image-1.5";
-
-    if (!apiKey || !azureEndpoint) {
-      return NextResponse.json(
-        { success: false, error: "Azure OpenAI API not configured" },
-        { status: 500 }
-      );
-    }
-
-    // Find selected character from imported config
-    const character = findCharacterById(charactersConfig, characterId);
-
-    if (!character) {
-      return NextResponse.json(
-        { success: false, error: "Invalid character selected" },
-        { status: 400 }
-      );
-    }
-
-    const referenceImages = characterImages[character.id] || [];
-
-    if (referenceImages.length === 0) {
-      return NextResponse.json(
-        { success: false, error: "No character reference images found" },
-        { status: 500 }
-      );
-    }
-
-    const systemPrompt = buildSystemPrompt(character, outputMode);
-    const fullPromptText = `${systemPrompt}\n\nUser request: ${prompt}`;
-
-    // Convert reference images to File objects for SDK
-    const imageFiles = referenceImages.map((img, i) =>
-      dataUrlToFile(img, `reference_${i}.png`)
-    );
-
-    // Create Azure OpenAI client
-    const client = getAzureClient(azureEndpoint, apiKey, deploymentName);
-
-    // Call images.edit() with reference images
-    const result = await client.images.edit({
-      image: imageFiles,
-      prompt: fullPromptText,
-      n: 1,
-      size: "1024x1024",
-      model: deploymentName,
-      quality: "high",
-      input_fidelity: "high",
-    });
-
-    if (!result.data || result.data.length === 0) {
-      console.error("No image data in response");
-      return NextResponse.json(
-        { success: false, error: "No image generated" },
-        { status: 500 }
-      );
-    }
-
-    // SDK returns b64_json in the data array
-    const base64Image = result.data[0].b64_json;
-    const imageUrl = `data:image/png;base64,${base64Image}`;
-
-    return NextResponse.json({
-      imageUrl,
-      success: true,
-      outputMode,
-      // Only include keyBackgroundColor for sticker mode (needed for post-processing)
-      ...(outputMode === "sticker" && { keyBackgroundColor: KEY_BACKGROUND_COLOR_HEX }),
-    });
-  } catch (error) {
-    console.error("Generation error:", error);
+    const body = await request.json();
+    prompt = body.prompt;
+    characterId = body.characterId;
+    outputMode = body.outputMode || "sticker";
+  } catch {
     return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Generation failed",
-      },
+      { success: false, error: "Invalid request body" },
+      { status: 400 }
+    );
+  }
+
+  if (!prompt || typeof prompt !== "string") {
+    return NextResponse.json(
+      { success: false, error: "Prompt is required" },
+      { status: 400 }
+    );
+  }
+
+  if (!characterId || typeof characterId !== "string") {
+    return NextResponse.json(
+      { success: false, error: "Character selection is required" },
+      { status: 400 }
+    );
+  }
+
+  const apiKey = process.env.AZURE_OPENAI_API_KEY;
+  const azureEndpoint = process.env.AZURE_OPENAI_ENDPOINT;
+  const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "gpt-image-1.5";
+
+  if (!apiKey || !azureEndpoint) {
+    return NextResponse.json(
+      { success: false, error: "Azure OpenAI API not configured" },
       { status: 500 }
     );
   }
+
+  const character = findCharacterById(charactersConfig, characterId);
+
+  if (!character) {
+    return NextResponse.json(
+      { success: false, error: "Invalid character selected" },
+      { status: 400 }
+    );
+  }
+
+  const referenceImages = characterImages[character.id] || [];
+
+  if (referenceImages.length === 0) {
+    return NextResponse.json(
+      { success: false, error: "No character reference images found" },
+      { status: 500 }
+    );
+  }
+
+  const systemPrompt = buildSystemPrompt(character, outputMode);
+  const fullPromptText = `${systemPrompt}\n\nUser request: ${prompt}`;
+
+  const imageFiles = referenceImages.map((img, i) =>
+    dataUrlToFile(img, `reference_${i}.png`)
+  );
+
+  const client = getAzureClient(azureEndpoint, apiKey, deploymentName);
+
+  // Create SSE stream for progressive image generation
+  const stream = new ReadableStream({
+    async start(controller) {
+      const encoder = new TextEncoder();
+
+      const sendEvent = (data: StreamingEvent) => {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+      };
+
+      try {
+        // Call images.edit() with streaming enabled
+        const result = await client.images.edit({
+          image: imageFiles,
+          prompt: fullPromptText,
+          n: 1,
+          size: "1024x1024",
+          model: deploymentName,
+          quality: "high",
+          input_fidelity: "high",
+          stream: true,
+          partial_images: 3,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any);
+
+        let finalBase64: string | undefined;
+
+        // Iterate over streaming events
+        for await (const event of result as unknown as AsyncIterable<{
+          type: string;
+          partial_image_index?: number;
+          b64_json?: string;
+        }>) {
+          if (event.type === "image_edit.partial_image") {
+            sendEvent({
+              type: "partial",
+              index: event.partial_image_index,
+              image: `data:image/png;base64,${event.b64_json}`,
+            });
+          } else if (event.type === "image_edit.completed") {
+            // Final image - b64_json is directly on the event
+            finalBase64 = event.b64_json;
+          }
+        }
+
+        // Send final image
+        if (finalBase64) {
+          sendEvent({
+            type: "final",
+            image: `data:image/png;base64,${finalBase64}`,
+            outputMode,
+            ...(outputMode === "sticker" && { keyBackgroundColor: KEY_BACKGROUND_COLOR_HEX }),
+          });
+        } else {
+          sendEvent({ type: "error", error: "No final image generated" });
+        }
+      } catch (error) {
+        console.error("Generation error:", error);
+        sendEvent({
+          type: "error",
+          error: error instanceof Error ? error.message : "Generation failed",
+        });
+      }
+
+      controller.close();
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+    },
+  });
 }
