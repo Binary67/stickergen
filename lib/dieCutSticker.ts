@@ -353,7 +353,7 @@ export async function createDieCutSticker(options: {
   outlineCtx.clearRect(0, 0, outputSize, outputSize);
   outlineCtx.imageSmoothingEnabled = true;
 
-  const stroke = Math.max(10, Math.round(outputSize * 0.02));
+  const stroke = Math.max(6, Math.round(outputSize * 0.008));
   const steps = Math.max(18, Math.round(2 * Math.PI * stroke));
   for (let s = 0; s < steps; s++) {
     const a = (s / steps) * Math.PI * 2;
@@ -369,14 +369,6 @@ export async function createDieCutSticker(options: {
   const ctx = finalCanvas.getContext("2d");
   if (!ctx) throw new Error("Canvas not supported");
   ctx.clearRect(0, 0, outputSize, outputSize);
-
-  ctx.save();
-  ctx.shadowColor = "rgba(0,0,0,0.35)";
-  ctx.shadowBlur = Math.round(outputSize * 0.02);
-  ctx.shadowOffsetX = 0;
-  ctx.shadowOffsetY = Math.round(outputSize * 0.01);
-  ctx.drawImage(outlineCanvas, 0, 0);
-  ctx.restore();
 
   ctx.drawImage(outlineCanvas, 0, 0);
   ctx.drawImage(cutCanvas, 0, 0);
