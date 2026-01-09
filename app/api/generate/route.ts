@@ -76,6 +76,7 @@ STICKER COMPOSITION:
 - Focus on the character(s) only: no scenery, no background objects, no frames
 - Center the character(s) with comfortable empty space around them (sticker padding)
 - Keep the design bold, readable, and clean in chibi/kawaii style
+- Do NOT add any white outline, stroke, or border around the characters
 
 BACKGROUND (IMPORTANT FOR POST-PROCESSING):
 - Use a perfectly solid, flat background color: ${KEY_BACKGROUND_COLOR_HEX}
