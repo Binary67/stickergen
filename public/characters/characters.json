@@ -26,7 +26,21 @@
         "characters/GQBB-4.png",
         "characters/GQBB-5.png"
       ],
-      "identityPrompt": "These are Dudu and Bubu. Preserve their EXACT appearance: faces, body shapes, colors, and distinctive features. The characters' identities must remain consistent with the reference images."
+      "identityPrompt": "These are Quby. Preserve their EXACT appearance: faces, body shapes, colors, and distinctive features. The characters' identities must remain consistent with the reference images."
+    },
+    {
+      "id": "bichimao",
+      "name": "Bichi Mao",
+      "icon": "characters/BichiMao-1.png",
+      "description": "Bichi Mao is an ultra-minimalist, white blob-like character with a large round head that forms most of its body, simple black dot eyes, a small curved smile (sometimes showing two tiny front teeth when grinning), and distinctive horizontal pink rectangular blush marks on both cheeks. The character has a tiny body with short stubby arms and legs, giving it a mochi or dumpling-like appearance. Drawn in a clean, simple line art style with minimal details, Bichi Mao has an innocent, cheerful personality and is often depicted doing everyday activities like eating bananas, waving hello, or lounging with a laptop.",
+      "images": [
+        "characters/BichiMao-1.png",
+        "characters/BichiMao-2.png",
+        "characters/BichiMao-3.png",
+        "characters/BichiMao-4.png",
+        "characters/BichiMao-5.png"
+      ],
+      "identityPrompt": "These are Bichi Mao. Preserve their EXACT appearance: faces, body shapes, colors, and distinctive features. The characters' identities must remain consistent with the reference images."
     }
   ]
 }
